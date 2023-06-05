@@ -61,11 +61,11 @@ begin
     S1 = rightrotate(e, 6) ^ rightrotate(e, 11) ^ rightrotate(e, 25);
     // Student to add remaning code below
     // Refer to SHA256 discussion slides to get logic for this function
-    ch = 
-    t1 = 
-    S0 = 
-    maj = 
-    t2 = 
+    ch = (e & f) ^ ((~e) & g);
+    t1 = ch + S1 + h + k + w;
+    S0 = rightrotate(a, 2) ^ rightrotate(a, 13) ^ rightrotate(a, 22);
+    maj = (a & b) ^ (a & c) ^ (b & c);
+    t2 = maj + S0;
     sha256_op = {t1 + t2, a, b, c, d + t1, e, f, g};
 end
 endfunction
@@ -109,7 +109,6 @@ begin
     IDLE: begin 
        if(start) begin
        // Student to add rest of the code  
-
 
 
 
