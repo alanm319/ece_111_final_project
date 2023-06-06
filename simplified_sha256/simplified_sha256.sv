@@ -273,7 +273,7 @@ begin
             {a, b, c, d, e, f, g, h} <= sha256_op(a, b, c, d, e, f, g, h, word_expand(i), i);
         end
         else begin
-            $display("w = %p", w);
+            // $display("w = %p", w);
             h0 <= h0 + a;
             h1 <= h1 + b;
             h2 <= h2 + c;
