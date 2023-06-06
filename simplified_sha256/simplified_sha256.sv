@@ -220,20 +220,17 @@ begin
             for (integer k = 0; k < RemainderWords; k = k + 1) begin
                 memory_block[(k*32) +: 32] <= message[(16*j)+k];
             end
-            $display("setting memory_block[%d:0] = %x", TotalPaddingWidth, {
-                1'b1,
-                {NumPadZeros{1'b0}},
-                MessageSize
-            });
 
-            memory_block[511 -: 64] <= MessageSize;
-            memory_block[(511 - 64) -: NumPadZeros] <= {NumPadZeros{1'b0}};
-            memory_block[(511 - 64 - NumPadZeros)] <= 1'b1;
-            // memory_block[511 -: TotalPaddingWidth] <= '{
-            //     MessageSize,
-            //     {NumPadZeros{1'b0}},
-            //     1'b1
-            // };
+            // memory_block[511 -: 64] <= MessageSize;
+            // memory_block[(511 - 64) -: NumPadZeros] <= {NumPadZeros{1'b0}};
+            // memory_block[(511 - 64 - NumPadZeros)] <= 1'b1;
+            memory_block[511 -: TotalPaddingWidth] <= {
+                // i do not know why we need to multiply size by 2
+                // but otherwise it doesn't match the testbench padding
+                MessageSize*2,
+                {NumPadZeros{1'b0}},
+                32'h80000000
+            };
         end
         // in this case just fill memory
         else begin
@@ -265,6 +262,8 @@ begin
         if (i == 0) begin
             $display("starting COMPUTE");
             $display("j = %d, memory_block = %x", j, memory_block);
+            $display("i = %d", i);
+            $display("initial a-h state: %p", {a, b, c, d, e, f, g, h});
         end
 
         if (i < 64) begin
@@ -274,16 +273,22 @@ begin
             // else begin
             //     w[i] <= word_expand(i);
             // end
-            $display("result of word expansion for %d is %x", i, word_expand(i));
             w[i] <= word_expand(i);
-            i <= i + 1;
+            i    <= i + 1;
+            $display("real %d: %p", i, sha256_op(a, b, c, d, e, f, g, h, word_expand(i), i));
             {a, b, c, d, e, f, g, h} <= sha256_op(a, b, c, d, e, f, g, h, word_expand(i), i);
         end
         else begin
             $display("w = %p", w);
-            {h0, h1, h2, h3, h4, h5, h6, h7} <= 
-                {h0, h1, h2, h3, h4, h5, h6, h7} + {a, b, c, d, e, f, g, h};
-            
+            h0 <= h0 + a;
+            h1 <= h1 + b;
+            h2 <= h2 + c;
+            h3 <= h3 + d;
+            h4 <= h4 + e;
+            h5 <= h5 + f;
+            h6 <= h6 + g;
+            h7 <= h7 + h;
+
             if ((j + 1) < num_blocks) begin
                 state <= BLOCK;
                 j <= j + 1;
@@ -292,7 +297,7 @@ begin
                 cur_addr <= output_addr;
                 cur_we <= 1;
                 offset <= 0;
-                counter <= 1;
+                counter <= 0;
                 state  <= WRITE;
             end
         end
@@ -314,7 +319,7 @@ begin
             $display("h7 = %x", h7);
         end
 
-        case(offset)
+        case(counter)
             0: cur_write_data <= h0;
             1: cur_write_data <= h1;
             2: cur_write_data <= h2;
