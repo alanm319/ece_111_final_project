@@ -189,7 +189,7 @@ begin
             cur_we <= 0;
             cur_addr <= message_addr;
 
-            $display("NUM_OF_WORDS=%d", NUM_OF_WORDS);
+            // $display("NUM_OF_WORDS=%d", NUM_OF_WORDS);
         end
     end
 
@@ -216,7 +216,7 @@ begin
     // For each of 512-bit block initiate hash value computation
         // in this case deal with padding
         if ((j + 1) == num_blocks) begin
-            $display("padding");
+            // $display("padding");
             for (integer k = 0; k < RemainderWords; k = k + 1) begin
                 memory_block[(k*32) +: 32] <= message[(16*j)+k];
             end
@@ -234,7 +234,7 @@ begin
         end
         // in this case just fill memory
         else begin
-            $display("not padding");
+            // $display("not padding");
             for (integer k = 0; k < 16; k = k + 1) begin
                 memory_block[(k*32) +: 32] <= message[(16*j)+k];
             end
@@ -259,23 +259,17 @@ begin
     // move to WRITE stage
     COMPUTE: begin
     // 64 processing rounds steps for 512-bit block
-        if (i == 0) begin
-            $display("starting COMPUTE");
-            $display("j = %d, memory_block = %x", j, memory_block);
-            $display("i = %d", i);
-            $display("initial a-h state: %p", {a, b, c, d, e, f, g, h});
-        end
+        // if (i == 0) begin
+        //     $display("starting COMPUTE");
+        //     $display("j = %d, memory_block = %x", j, memory_block);
+        //     $display("i = %d", i);
+        //     $display("initial a-h state: %p", {a, b, c, d, e, f, g, h});
+        // end
 
         if (i < 64) begin
-            // if (i < 16) begin
-            //     w[i] <= memory_block[i*32 +: 32];
-            // end
-            // else begin
-            //     w[i] <= word_expand(i);
-            // end
             w[i] <= word_expand(i);
             i    <= i + 1;
-            $display("real %d: %p", i, sha256_op(a, b, c, d, e, f, g, h, word_expand(i), i));
+            // $display("real %d: %p", i, sha256_op(a, b, c, d, e, f, g, h, word_expand(i), i));
             {a, b, c, d, e, f, g, h} <= sha256_op(a, b, c, d, e, f, g, h, word_expand(i), i);
         end
         else begin
@@ -308,16 +302,16 @@ begin
     // h0 to h7 after compute stage has final computed hash value
     // write back these h0 to h7 to memory starting from output_addr
     WRITE: begin
-        if (offset == 0) begin
-            $display("h0 = %x", h0);
-            $display("h1 = %x", h1);
-            $display("h2 = %x", h2);
-            $display("h3 = %x", h3);
-            $display("h4 = %x", h4);
-            $display("h5 = %x", h5);
-            $display("h6 = %x", h6);
-            $display("h7 = %x", h7);
-        end
+        // if (offset == 0) begin
+        //     $display("h0 = %x", h0);
+        //     $display("h1 = %x", h1);
+        //     $display("h2 = %x", h2);
+        //     $display("h3 = %x", h3);
+        //     $display("h4 = %x", h4);
+        //     $display("h5 = %x", h5);
+        //     $display("h6 = %x", h6);
+        //     $display("h7 = %x", h7);
+        // end
 
         case(counter)
             0: cur_write_data <= h0;
