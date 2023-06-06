@@ -23,7 +23,7 @@ localparam int Remainder = MessageSize % 512;
 localparam int NumPadZeros = 512 - Remainder - 1 - 64;
 localparam int RemainderWords = NUM_OF_WORDS % 16;
 localparam logic EvenFit = Remainder == 0;
-localparam [7:0] TotalPaddingWidth = 1 + NumPadZeros + 64;
+localparam [63:0] TotalPaddingWidth = 512 - Remainder;
 
 // FSM state variables
 enum logic [2:0] {
@@ -54,7 +54,7 @@ logic        cur_we;
 logic [15:0] cur_addr;
 logic [31:0] cur_write_data;
 
-logic [512:0] memory_block;
+logic [511:0] memory_block;
 logic [ 7:0] tstep;
 
 logic [5:0] t;
@@ -117,9 +117,14 @@ endfunction
 function automatic logic32 word_expand(input logic[5:0] t);
   logic32 s0, s1;
 begin
-    s0 = rightrotate(w[t-15], 7) ^ rightrotate(w[t-15], 18) ^ (w[t-15] >> 3);
-    s1 = rightrotate(w[t-2], 17) ^ rightrotate(w[t-2],  19) ^ (w[t-2]  >> 10);
-    word_expand = w[t-16] + s0 + w[t-7] + s1;
+    if (i < 16) begin
+        word_expand = memory_block[t*32 +: 32];
+    end
+    else begin
+        s0 = rightrotate(w[t-15], 7) ^ rightrotate(w[t-15], 18) ^ (w[t-15] >> 3);
+        s1 = rightrotate(w[t-2], 17) ^ rightrotate(w[t-2],  19) ^ (w[t-2]  >> 10);
+        word_expand = w[t-16] + s0 + w[t-7] + s1;
+    end
 end
 endfunction
 
@@ -175,18 +180,21 @@ begin
             // initialize all the counters
             j <= 'b0;
             i <= 'b0;
-            offset <= 'b0;
             counter <= 'b0;
 
+            // prep for transition to READ_WAIT
+            // state <= READ_WAIT;
             state <= READ;
+            offset <= 'b0;
+            cur_we <= 0;
+            cur_addr <= message_addr;
+
+            $display("NUM_OF_WORDS=%d", NUM_OF_WORDS);
         end
     end
 
 
     READ: begin
-        cur_we <= 0;
-        cur_addr <= message_addr;
-
         if (offset <= NUM_OF_WORDS) begin
             // this is to account for delayed appearance of data on mem_read_data
             if (offset > 0) begin
@@ -207,22 +215,43 @@ begin
     // Fetch message in 512-bit block size
     // For each of 512-bit block initiate hash value computation
         // in this case deal with padding
-        if (!EvenFit && (j + 1) == NUM_OF_WORDS) begin
+        if ((j + 1) == num_blocks) begin
+            $display("padding");
             for (integer k = 0; k < RemainderWords; k = k + 1) begin
                 memory_block[(k*32) +: 32] <= message[(16*j)+k];
             end
-            memory_block[TotalPaddingWidth:0] <= {
+            $display("setting memory_block[%d:0] = %x", TotalPaddingWidth, {
                 1'b1,
                 {NumPadZeros{1'b0}},
                 MessageSize
-            };
+            });
+
+            memory_block[511 -: 64] <= MessageSize;
+            memory_block[(511 - 64) -: NumPadZeros] <= {NumPadZeros{1'b0}};
+            memory_block[(511 - 64 - NumPadZeros)] <= 1'b1;
+            // memory_block[511 -: TotalPaddingWidth] <= '{
+            //     MessageSize,
+            //     {NumPadZeros{1'b0}},
+            //     1'b1
+            // };
         end
         // in this case just fill memory
         else begin
-            for (integer k = 0; k < 16; k = k + 32) begin
+            $display("not padding");
+            for (integer k = 0; k < 16; k = k + 1) begin
                 memory_block[(k*32) +: 32] <= message[(16*j)+k];
             end
         end
+
+        // initialize state variables
+        a  <= h0;
+        b  <= h1;
+        c  <= h2;
+        d  <= h3;
+        e  <= h4;
+        f  <= h5;
+        g  <= h6;
+        h  <= h7;
         state <= COMPUTE;
         i <= 0;
     end
@@ -233,17 +262,25 @@ begin
     // move to WRITE stage
     COMPUTE: begin
     // 64 processing rounds steps for 512-bit block
-        if (i <= 64) begin
-            if (i < 16) begin
-                w[i] <= memory_block[i*32 +: 32];
-            end
-            else begin
-                w[i] <= word_expand(i);
-            end
+        if (i == 0) begin
+            $display("starting COMPUTE");
+            $display("j = %d, memory_block = %x", j, memory_block);
+        end
+
+        if (i < 64) begin
+            // if (i < 16) begin
+            //     w[i] <= memory_block[i*32 +: 32];
+            // end
+            // else begin
+            //     w[i] <= word_expand(i);
+            // end
+            $display("result of word expansion for %d is %x", i, word_expand(i));
+            w[i] <= word_expand(i);
             i <= i + 1;
-            {a, b, c, d, e, f, g, h} <= sha256_op(a, b, c, d, e, f, g, h, w[i], i);
+            {a, b, c, d, e, f, g, h} <= sha256_op(a, b, c, d, e, f, g, h, word_expand(i), i);
         end
         else begin
+            $display("w = %p", w);
             {h0, h1, h2, h3, h4, h5, h6, h7} <= 
                 {h0, h1, h2, h3, h4, h5, h6, h7} + {a, b, c, d, e, f, g, h};
             
@@ -252,7 +289,11 @@ begin
                 j <= j + 1;
             end
             else begin
-                state <= WRITE;
+                cur_addr <= output_addr;
+                cur_we <= 1;
+                offset <= 0;
+                counter <= 1;
+                state  <= WRITE;
             end
         end
 
@@ -262,8 +303,18 @@ begin
     // h0 to h7 after compute stage has final computed hash value
     // write back these h0 to h7 to memory starting from output_addr
     WRITE: begin
-        cur_addr <= output_addr + counter;
-        case(counter)
+        if (offset == 0) begin
+            $display("h0 = %x", h0);
+            $display("h1 = %x", h1);
+            $display("h2 = %x", h2);
+            $display("h3 = %x", h3);
+            $display("h4 = %x", h4);
+            $display("h5 = %x", h5);
+            $display("h6 = %x", h6);
+            $display("h7 = %x", h7);
+        end
+
+        case(offset)
             0: cur_write_data <= h0;
             1: cur_write_data <= h1;
             2: cur_write_data <= h2;
@@ -272,9 +323,11 @@ begin
             5: cur_write_data <= h5;
             6: cur_write_data <= h6;
             7: cur_write_data <= h7;
+            8: state <= IDLE;
             default: $display("Error: default in case");
         endcase
 
+        offset <= counter;
         counter <= counter + 1;
     end
 
