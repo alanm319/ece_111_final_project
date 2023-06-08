@@ -6,7 +6,7 @@ module sha256_block (
 
  output logic[31:0] hash[8],
  output logic[31:0] alpha[8],
- );
+ output logic done);
 
 parameter integer K[0:63] = '{
    32'h428a2f98,32'h71374491,32'hb5c0fbcf,32'he9b5dba5,32'h3956c25b,32'h59f111f1,32'h923f82a4,32'hab1c5ed5,
@@ -21,8 +21,8 @@ parameter integer K[0:63] = '{
 
 // FSM state variables
 enum logic [2:0] {
-  IDLE,
-  COMPUTE,
+    IDLE,
+    COMPUTE
 } state;
 
 typedef logic[31:0] logic32;
@@ -115,9 +115,7 @@ begin
             g  <= alpha_init[6];
             h  <= alpha_init[7];
             // initialize all the counters
-            j <= 'b0;
             i <= 'b0;
-            counter <= 'b0;
 
             // prep for transition to READ_WAIT
             // state <= READ_WAIT;
