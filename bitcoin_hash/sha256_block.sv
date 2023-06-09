@@ -21,9 +21,9 @@ parameter integer id = 99;
 
 // FSM state variables
 enum logic [2:0] {
-    IDLE,
-    BLOCK,
-    COMPUTE
+    IDLE    = 3'b001,
+    BLOCK   = 3'b010,
+    COMPUTE = 3'b100
 } state;
 
 typedef logic[31:0] logic32;
@@ -142,12 +142,8 @@ begin
     // move to WRITE stage
     COMPUTE: begin
         if (i < 64) begin
-            if (id == 0) begin
-                $displayh("word expansion (id=%d) word %d = %p", id, i, word_expand(i));
-                $displayh("sha256_op (id=%d) word %d = %p", id, i, sha256_op(a, b, c, d, e, f, g, h, word_expand(i), i));
-            end
             w[i%16] <= word_expand(i);
-            i    <= i + 1;
+            i       <= i + 1;
             {a, b, c, d, e, f, g, h} <= sha256_op(a, b, c, d, e, f, g, h, word_expand(i), i);
 
         end

@@ -142,6 +142,7 @@ begin
             w[t] = w[t-16] + s0 + w[t-7] + s1;
         end
     end
+    // $displayh("tb word expansions part1: %p", dpsram_tb[0:63]);
 
     // INITIAL HASH
 
@@ -180,7 +181,7 @@ begin
     fh6 = fh6 + g;
     fh7 = fh7 + h;
 
-    $displayh("final hash tb (part1): %p", {fh0, fh1, fh2, fh3, fh4, fh5, fh6, fh7});
+    // $displayh("final hash tb (part1): %p", {fh0, fh1, fh2, fh3, fh4, fh5, fh6, fh7});
 
 // 2. COMPUTE SECOND BLOCK FOR FIRST HASH FOR EACH NONCE
 
@@ -203,7 +204,7 @@ begin
             end
 
             if (n == 0) begin
-                $displayh("tb word expansion part2 word %d = %p", t, w[t]);
+                // $displayh("tb word expansion part2 word %d = %p", t, w[t]);
             end
         end
 
@@ -230,8 +231,13 @@ begin
         // HASH ROUNDS
 
         for (t = 0; t < 64; t++) begin
+            if (t == 0 && n == 0) begin
+                // $displayh("tb sha256 op params word %d = %p", t, {a, b, c, d, e, f, g, h, w[t], t});
+            end
             {a, b, c, d, e, f, g, h} = sha256_op(a, b, c, d, e, f, g, h, w[t], t);
-            $displayh("tb sha256 op part2 word %d = %p", t, {a, b, c, d, e, f, g, h});
+            if (t == 0 && n == 0) begin
+                // $displayh("tb sha256 op part2 word %d = %p", t, {a, b, c, d, e, f, g, h});
+            end
         end
 
         // FINAL HASH FOR SECOND BLOCK
@@ -245,7 +251,7 @@ begin
         h6[n] = h6[n] + g;
         h7[n] = h7[n] + h;
 
-        $display("final hash part2 nonce %d = %x", n, {h0[n], h1[n], h2[n], h3[n], h4[n], h5[n], h6[n], h7[n]});
+        // $display("final hash part2 nonce %d = %x", n, {h0[n], h1[n], h2[n], h3[n], h4[n], h5[n], h6[n], h7[n]});
     end
 
 // 3. COMPUTE SECOND HASH FOR EACH NONCE
@@ -268,6 +274,9 @@ begin
             w[t] = 32'h00000000;
         end
         w[15] = 32'd256; // SIZE = 256 BITS
+
+
+        $displayh("tb memory input for phase3 nonce %d = %p", n, w);
 
         for (t = 16; t < 64; t++) begin
             s0 = rightrotate(w[t-15], 7) ^ rightrotate(w[t-15], 18) ^ (w[t-15] >> 3);
