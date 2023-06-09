@@ -36,6 +36,8 @@ logic [31:0] w[64];
 logic [31:0] h0, h1, h2, h3, h4, h5, h6, h7;
 logic [31:0] a, b, c, d, e, f, g, h;
 logic [ 7:0] i;
+logic is_done;
+assign done = is_done;
 
 // logic [511:0] memory_block;
 
@@ -95,6 +97,7 @@ begin
   else case (state)
     // Initialize hash values h0 to h7 and a to h, other variables and memory we, address offset, etc
     IDLE: begin
+        is_done <= 0;
         if(start) begin
         // Student to add rest of the code
             h0 <= h_init[0];
@@ -143,6 +146,7 @@ begin
             h6 <= h6 + g;
             h7 <= h7 + h;
             state  <= IDLE;
+            is_done <= 1;
         end
 
     end
@@ -153,8 +157,5 @@ begin
 
    endcase
   end
-
-// Generate done when SHA256 hash computation has finished and moved to IDLE state
-assign done = (state == IDLE);
 
 endmodule
