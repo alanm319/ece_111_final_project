@@ -180,6 +180,8 @@ begin
     fh6 = fh6 + g;
     fh7 = fh7 + h;
 
+    $displayh("final hash tb (part1): %p", {fh0, fh1, fh2, fh3, fh4, fh5, fh6, fh7});
+
 // 2. COMPUTE SECOND BLOCK FOR FIRST HASH FOR EACH NONCE
 
     for (n = 0; n < NUM_NONCES; n++) begin
@@ -188,6 +190,9 @@ begin
 
         dpsram_tb[19] = n; // REPLACE THE NONCE VALUE
 
+
+        // $displayh("tb memory input for nonce %d is %x", n, 512'(dpsram_tb[16:31]));
+
         for (t = 0; t < 64; t++) begin
             if (t < 16) begin
                 w[t] = dpsram_tb[t+16];
@@ -195,6 +200,10 @@ begin
                 s0 = rightrotate(w[t-15], 7) ^ rightrotate(w[t-15], 18) ^ (w[t-15] >> 3);
                 s1 = rightrotate(w[t-2], 17) ^ rightrotate(w[t-2], 19) ^ (w[t-2] >> 10);
                 w[t] = w[t-16] + s0 + w[t-7] + s1;
+            end
+
+            if (n == 0) begin
+                $displayh("tb word expansion part2 word %d = %p", t, w[t]);
             end
         end
 
@@ -222,6 +231,7 @@ begin
 
         for (t = 0; t < 64; t++) begin
             {a, b, c, d, e, f, g, h} = sha256_op(a, b, c, d, e, f, g, h, w[t], t);
+            $displayh("tb sha256 op part2 word %d = %p", t, {a, b, c, d, e, f, g, h});
         end
 
         // FINAL HASH FOR SECOND BLOCK
@@ -234,6 +244,8 @@ begin
         h5[n] = h5[n] + f;
         h6[n] = h6[n] + g;
         h7[n] = h7[n] + h;
+
+        $display("final hash part2 nonce %d = %x", n, {h0[n], h1[n], h2[n], h3[n], h4[n], h5[n], h6[n], h7[n]});
     end
 
 // 3. COMPUTE SECOND HASH FOR EACH NONCE

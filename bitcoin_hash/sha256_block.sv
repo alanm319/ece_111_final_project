@@ -1,11 +1,9 @@
 module sha256_block (
  input logic  clk, reset_n, start,
  input logic [31:0] h_init[8],
- input logic [31:0] alpha_init[8],
  input logic [511:0] memory_block,
 
  output logic[31:0] hash[8],
- output logic[31:0] alpha[8],
  output logic done);
 
 parameter integer K[0:63] = '{
@@ -19,9 +17,12 @@ parameter integer K[0:63] = '{
    32'h748f82ee,32'h78a5636f,32'h84c87814,32'h8cc70208,32'h90befffa,32'ha4506ceb,32'hbef9a3f7,32'hc67178f2
 };
 
+parameter integer id = 99;
+
 // FSM state variables
 enum logic [2:0] {
     IDLE,
+    BLOCK,
     COMPUTE
 } state;
 
@@ -32,17 +33,26 @@ typedef logic[31:0] logic32;
 // or modify these variables. Code below is more as a reference.
 
 // Local variables
-logic [31:0] w[64];
+logic [31:0] w[16];
 logic [31:0] h0, h1, h2, h3, h4, h5, h6, h7;
 logic [31:0] a, b, c, d, e, f, g, h;
 logic [ 7:0] i;
 logic is_done;
+// logic [511:0] memory_block;
 assign done = is_done;
 
 // logic [511:0] memory_block;
 
-assign hash = {h0, h1, h2, h3, h4, h5, h6, h7};
-assign alpha = {a, b, c, d, e, f, g, h};
+// oh god
+assign hash[0] = h0;
+assign hash[1] = h1;
+assign hash[2] = h2;
+assign hash[3] = h3;
+assign hash[4] = h4;
+assign hash[5] = h5;
+assign hash[6] = h6;
+assign hash[7] = h7;
+
 
 // SHA256 hash round
 function automatic logic [255:0] sha256_op(input logic [31:0] a, logic32 b, logic32 c,
@@ -63,16 +73,16 @@ end
 endfunction
 
 
-function automatic logic32 word_expand(input logic[5:0] t);
+function automatic logic32 word_expand(input logic[7:0] t);
   logic32 s0, s1;
 begin
-    if (i < 16) begin
-        word_expand = memory_block[t*32 +: 32];
+    if (t < 16) begin
+        word_expand = memory_block[512-(t+1)*32 +: 32];
     end
     else begin
-        s0 = rightrotate(w[t-15], 7) ^ rightrotate(w[t-15], 18) ^ (w[t-15] >> 3);
-        s1 = rightrotate(w[t-2], 17) ^ rightrotate(w[t-2],  19) ^ (w[t-2]  >> 10);
-        word_expand = w[t-16] + s0 + w[t-7] + s1;
+        s0 = rightrotate(w[(t-15)%16], 7) ^ rightrotate(w[(t-15)%16], 18) ^ (w[(t-15)%16] >> 3);
+        s1 = rightrotate(w[(t-2)%16], 17) ^ rightrotate(w[(t-2)%16],  19) ^ (w[(t-2)%16]  >> 10);
+        word_expand = w[(t-16)%16] + s0 + w[(t-7)%16] + s1;
     end
 end
 endfunction
@@ -109,14 +119,14 @@ begin
             h6 <= h_init[6];
             h7 <= h_init[7];
 
-            a  <= alpha_init[0];
-            b  <= alpha_init[1];
-            c  <= alpha_init[2];
-            d  <= alpha_init[3];
-            e  <= alpha_init[4];
-            f  <= alpha_init[5];
-            g  <= alpha_init[6];
-            h  <= alpha_init[7];
+            a  <= h_init[0];
+            b  <= h_init[1];
+            c  <= h_init[2];
+            d  <= h_init[3];
+            e  <= h_init[4];
+            f  <= h_init[5];
+            g  <= h_init[6];
+            h  <= h_init[7];
             // initialize all the counters
             i <= 'b0;
 
@@ -132,9 +142,14 @@ begin
     // move to WRITE stage
     COMPUTE: begin
         if (i < 64) begin
-            w[i] <= word_expand(i);
+            if (id == 0) begin
+                $displayh("word expansion (id=%d) word %d = %p", id, i, word_expand(i));
+                $displayh("sha256_op (id=%d) word %d = %p", id, i, sha256_op(a, b, c, d, e, f, g, h, word_expand(i), i));
+            end
+            w[i%16] <= word_expand(i);
             i    <= i + 1;
             {a, b, c, d, e, f, g, h} <= sha256_op(a, b, c, d, e, f, g, h, word_expand(i), i);
+
         end
         else begin
             h0 <= h0 + a;

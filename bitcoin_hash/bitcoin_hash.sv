@@ -1,5 +1,3 @@
-`include "sha256_block.sv"
-
 module bitcoin_hash (input logic        clk, reset_n, start,
                      input logic [15:0] message_addr, output_addr,
                     output logic        done, mem_clk, mem_we,
@@ -18,14 +16,14 @@ logic[511:0] memory_input[NUM_BLOCKS];
 logic block_start;
 logic[NUM_BLOCKS-1:0] block_done;
 
-logic[31:0] init_hash[NUM_BLOCKS][8];
-logic[31:0] init_alpha[NUM_BLOCKS][8];
+logic[31:0] init_hash[8];
+logic[31:0] init_alpha[8];
 
 logic[31:0] end_hash[NUM_BLOCKS][8];
 logic[31:0] end_alpha[NUM_BLOCKS][8];
 
-localparam [63:0] MessageSize = NUM_OF_WORDS * 32;
-logic [31:0] message[19];
+localparam [63:0] MessageSize = (NUM_OF_WORDS + 1) * 32;
+logic [31:0] message[NUM_OF_WORDS];
 logic [15:0] offset;
 
 logic [31:0] cur_write_data;
@@ -35,18 +33,19 @@ logic random_flag;
 
 genvar i;
 generate
-for (i = 0; i < NUM_BLOCKS; i++) begin
-    sha256_block block (
+for (i = 0; i < NUM_BLOCKS; i++) begin: sha_blocks
+    sha256_block block(
         .clk(clk), .reset_n(reset_n),
         .start(block_start),
         .memory_block(memory_input[i]),
 
-        .h_init(init_hash[i]),
-        .alpha_init(init_alpha[i]),
+        .h_init(init_hash),
+        .alpha_init(init_alpha),
 
         .hash(end_hash[i]),
         .alpha(end_alpha[i]),
         .done(block_done[i]));
+    defparam block.id = i;
 end
 endgenerate
 
@@ -107,39 +106,53 @@ always_ff @( posedge clk, negedge reset_n) begin
         READ: begin
             if (offset <= NUM_OF_WORDS) begin
                 if (offset > 0) begin
-                    $display("reading data %p", mem_read_data);
+                    $displayh("reading data %p", mem_read_data);
                     message[offset-1] <= mem_read_data;
                 end
                 offset <= offset + 1;
             end
             else begin
-                init_hash[0] <= HASH_CONSTANTS;
-                init_alpha[0] <= HASH_CONSTANTS;
-                memory_input[0] <= 512'(message[0:15]);
+                init_hash <= HASH_CONSTANTS;
+                init_alpha <= HASH_CONSTANTS;
+
+                for (int i = 0; i < 16; i++) begin
+                    memory_input[0][(i*32) +: 32] <= message[i];
+                end
                 state <= PHASE1;
                 block_start <= 1;
+                random_flag <= 1;
             end
         end
 
         PHASE1: begin
             if (block_done[0]) begin
-                $display("Output of phase1 is %p", end_hash[0]);
+                $displayh("Output of phase1 is %p", end_hash[0]);
                 for (logic[31:0] i = 0; i < NUM_BLOCKS; i++) begin
-                        init_hash[i] <= end_hash[0];
-                        init_alpha[i] <= end_alpha[0];
-                        memory_input[i] <= {
-                            // i do not know why we need to multiply size by 2
-                            // but otherwise it doesn't match the testbench padding
-                            MessageSize*2,
-                            {9{32'b0}},
-                            32'h80000000,
-                            i, // nonce
-                            96'(message[16:18])
-                        };
+                        init_hash <= end_hash[0];
+                        init_alpha <= end_alpha[0];
+                        // memory_input[i] <= {
+                        //     // i do not know why we need to multiply size by 2
+                        //     // but otherwise it doesn't match the testbench padding
+                        //     MessageSize*2,
+                        //     {9{32'b0}},
+                        //     32'h80000000,
+                        //     i, // nonce
+                        //     96'b0 // (message[16:18])
+                        // };
+                        memory_input[i][63:0] <= MessageSize;
+                        memory_input[i][351:64] <= 288'b0;
+                        memory_input[i][383:352] <= 32'h80000000;
+                        memory_input[i][415:384] <= i;
+
+                        for (int j = 0; j < 3; j++) begin
+                            memory_input[i][(512-32*(j+1)) +: 32] <= message[(16+j)];
+                        end
+
                         block_start <= 1;
                 end
                 // state <= PHASE2_1;
                 state <= PHASE2_1;
+                random_flag <= 1;
             end
             else begin
                 // keep block_start from immediately starting the 0th block on completion
@@ -148,22 +161,28 @@ always_ff @( posedge clk, negedge reset_n) begin
         end
 
         PHASE2_1: begin
-            if (!random_flag) begin
-                random_flag <= 1;
-                $display("memory input to all phase2 blocks is %p", memory_input);
+            if (random_flag) begin
+                random_flag <= 0;
+
+                for (int i = 0; i < NUM_BLOCKS; i++) begin
+                    $displayh("memory input to all phase2 nonce %d is %p", i, memory_input[i]);
+                end
             end
             if (& block_done) begin
                 // setup for phase 3
-                $display("all memory outputs of phase2: %p", end_hash);
                 for (int i = 0; i < NUM_BLOCKS; i++) begin
-                    init_hash[i] <= HASH_CONSTANTS;
-                    init_alpha[i] <= HASH_CONSTANTS;
+                    $displayh("output of phase2 block %d is %p", i, end_hash[i]);
+                    init_hash <= HASH_CONSTANTS;
+                    init_alpha <= HASH_CONSTANTS;
                     memory_input[i] <= {
                         64'd512,
                         {5{32'b0}},
                         32'h80000000,
-                        256'(end_hash[i])
+                        256'b0 // (end_hash[i])
                     };
+                    for (int j = 0; j < 8; j++) begin
+                        memory_input[i][(32*j+256) +: 32] <= end_hash[i][j];
+                    end
                 end
                 random_flag <= 0;
                 state <= PHASE3_1;
@@ -175,16 +194,16 @@ always_ff @( posedge clk, negedge reset_n) begin
         end
 
         PHASE2_2: begin
-            $display("unimplemented");
+            $displayh("unimplemented");
         end
 
         PHASE3_1: begin
             if (!random_flag) begin
                 random_flag <= 1;
-                $display("memory input to all phase3 blocks is %p", memory_input);
+                $displayh("memory input to all phase3 blocks is %p", memory_input);
             end
             if (& block_done) begin
-                $display("phase3 outputs: %p", end_hash);
+                $displayh("phase3 outputs: %p", end_hash);
                 offset <= 0;
                 state <= WRITE;
                 cur_addr <= output_addr;
@@ -195,7 +214,7 @@ always_ff @( posedge clk, negedge reset_n) begin
         end
 
         PHASE3_2: begin
-            $display("unimplemented");
+            $displayh("unimplemented");
         end
 
         WRITE: begin
@@ -210,7 +229,7 @@ always_ff @( posedge clk, negedge reset_n) begin
         end
 
         default: begin
-            $display("Hit default in bitcoin_hash");
+            $displayh("Hit default in bitcoin_hash");
         end
     endcase
 end
