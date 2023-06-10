@@ -118,12 +118,12 @@ function automatic logic32 word_expand(input logic[5:0] t);
   logic32 s0, s1;
 begin
     if (i < 16) begin
-        word_expand = memory_block[t*32 +: 32];
+        word_expand = memory_block[512-(t+1)*32 +: 32];
     end
     else begin
-        s0 = rightrotate(w[t-15], 7) ^ rightrotate(w[t-15], 18) ^ (w[t-15] >> 3);
-        s1 = rightrotate(w[t-2], 17) ^ rightrotate(w[t-2],  19) ^ (w[t-2]  >> 10);
-        word_expand = w[t-16] + s0 + w[t-7] + s1;
+        s0 = rightrotate(w[1],7)^rightrotate(w[1],18)^(w[1]>>3);
+        s1 = rightrotate(w[14],17)^rightrotate(w[14],19)^(w[14]>>10);
+        word_expand = w[0] + s0 + w[9] + s1;
     end
 end
 endfunction
