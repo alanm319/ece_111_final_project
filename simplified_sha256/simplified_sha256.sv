@@ -41,7 +41,7 @@ typedef logic[31:0] logic32;
 // or modify these variables. Code below is more as a reference.
 
 // Local variables
-logic [31:0] w[64];
+logic [31:0] w[16];
 logic [31:0] message[20];
 logic [31:0] wt;
 logic [31:0] h0, h1, h2, h3, h4, h5, h6, h7;
@@ -114,11 +114,11 @@ begin
 end
 endfunction
 
-function automatic logic32 word_expand(input logic[5:0] t);
+function automatic logic32 word_expand(input logic[7:0] t);
   logic32 s0, s1;
 begin
-    if (i < 16) begin
-        word_expand = memory_block[512-(t+1)*32 +: 32];
+    if (t < 16) begin
+        word_expand = memory_block[t*32 +: 32];
     end
     else begin
         s0 = rightrotate(w[1],7)^rightrotate(w[1],18)^(w[1]>>3);
@@ -143,7 +143,6 @@ function automatic logic [31:0] rightrotate(input logic [31:0] x,
                                   input logic [ 7:0] r);
    rightrotate = (x >> r) | (x << (32 - r));
 endfunction
-
 
 
 // SHA-256 FSM
@@ -267,7 +266,8 @@ begin
         // end
 
         if (i < 64) begin
-            w[i] <= word_expand(i);
+            w[15] <= word_expand(i);
+            for (int n = 0; n < 15; n++) w[n] <= w[n+1];
             i    <= i + 1;
             // $display("real %d: %p", i, sha256_op(a, b, c, d, e, f, g, h, word_expand(i), i));
             {a, b, c, d, e, f, g, h} <= sha256_op(a, b, c, d, e, f, g, h, word_expand(i), i);
