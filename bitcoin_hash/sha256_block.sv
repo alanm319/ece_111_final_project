@@ -20,10 +20,10 @@ parameter integer K[0:63] = '{
 parameter integer id = 99;
 
 // FSM state variables
-enum logic [2:0] {
-    IDLE    = 3'b001,
-    BLOCK   = 3'b010,
-    COMPUTE = 3'b100
+enum logic [1:0] {
+    IDLE    = 2'd0,
+    BLOCK   = 2'd1,
+    COMPUTE = 2'd2
 } state;
 
 typedef logic[31:0] logic32;
@@ -38,10 +38,7 @@ logic [31:0] h0, h1, h2, h3, h4, h5, h6, h7;
 logic [31:0] a, b, c, d, e, f, g, h;
 logic [ 7:0] i;
 logic is_done;
-// logic [511:0] memory_block;
 assign done = is_done;
-
-// logic [511:0] memory_block;
 
 // oh god
 assign hash[0] = h0;
@@ -80,9 +77,12 @@ begin
         word_expand = memory_block[512-(t+1)*32 +: 32];
     end
     else begin
-        s0 = rightrotate(w[(t-15)%16], 7) ^ rightrotate(w[(t-15)%16], 18) ^ (w[(t-15)%16] >> 3);
-        s1 = rightrotate(w[(t-2)%16], 17) ^ rightrotate(w[(t-2)%16],  19) ^ (w[(t-2)%16]  >> 10);
-        word_expand = w[(t-16)%16] + s0 + w[(t-7)%16] + s1;
+        // s0 = rightrotate(w[(t-15)%16], 7) ^ rightrotate(w[(t-15)%16], 18) ^ (w[(t-15)%16] >> 3);
+        // s1 = rightrotate(w[(t-2)%16], 17) ^ rightrotate(w[(t-2)%16],  19) ^ (w[(t-2)%16]  >> 10);
+        // word_expand = w[(t-16)%16] + s0 + w[(t-7)%16] + s1;
+        s0 = rightrotate(w[1],7)^rightrotate(w[1],18)^(w[1]>>3);
+        s1 = rightrotate(w[14],17)^rightrotate(w[14],19)^(w[14]>>10);
+        word_expand = w[0] + s0 + w[9] + s1;
     end
 end
 endfunction
@@ -93,6 +93,9 @@ function automatic logic [31:0] rightrotate(input logic [31:0] x,
                                   input logic [ 7:0] r);
    rightrotate = (x >> r) | (x << (32 - r));
 endfunction
+
+logic32 current_expansion;
+assign current_expansion = word_expand(i);
 
 
 
@@ -142,9 +145,11 @@ begin
     // move to WRITE stage
     COMPUTE: begin
         if (i < 64) begin
-            w[i%16] <= word_expand(i);
-            i       <= i + 1;
-            {a, b, c, d, e, f, g, h} <= sha256_op(a, b, c, d, e, f, g, h, word_expand(i), i);
+            // w[i%16] <= current_expansion;
+            w[15] <= current_expansion;
+            i     <= i + 1;
+            for (int n = 0; n < 15; n++) w[n] <= w[n+1];
+            {a, b, c, d, e, f, g, h} <= sha256_op(a, b, c, d, e, f, g, h, current_expansion, i);
 
         end
         else begin
