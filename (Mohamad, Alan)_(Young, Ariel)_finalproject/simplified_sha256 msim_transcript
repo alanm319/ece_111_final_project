@@ -1,0 +1,158 @@
+# Reading pref.tcl
+# do simplified_sha256_run_msim_rtl_verilog.do
+# if {[file exists rtl_work]} {
+# 	vdel -lib rtl_work -all
+# }
+# vlib rtl_work
+# vmap work rtl_work
+# Model Technology ModelSim - Intel FPGA Edition vmap 2020.1 Lib Mapping Utility 2020.02 Feb 28 2020
+# vmap work rtl_work 
+# Copying D:/intelFPGA_lite/20.1/modelsim_ase/win32aloem/../modelsim.ini to modelsim.ini
+# Modifying modelsim.ini
+# 
+# vlog -sv -work work +incdir+D:/School/ECE\ 111/ece_111_final_project-main/simplified_sha256 {D:/School/ECE 111/ece_111_final_project-main/simplified_sha256/simplified_sha256.sv}
+# Model Technology ModelSim - Intel FPGA Edition vlog 2020.1 Compiler 2020.02 Feb 28 2020
+# Start time: 20:51:48 on Jun 10,2023
+# vlog -reportprogress 300 -sv -work work "+incdir+D:/School/ECE 111/ece_111_final_project-main/simplified_sha256" D:/School/ECE 111/ece_111_final_project-main/simplified_sha256/simplified_sha256.sv 
+# -- Compiling module simplified_sha256
+# 
+# Top level modules:
+# 	simplified_sha256
+# End time: 20:51:48 on Jun 10,2023, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# 
+vlog -reportprogress 300 -work work {D:/School/ECE 111/ece_111_final_project-main/simplified_sha256/simplified_sha256.sv}
+# Model Technology ModelSim - Intel FPGA Edition vlog 2020.1 Compiler 2020.02 Feb 28 2020
+# Start time: 20:53:57 on Jun 10,2023
+# vlog -reportprogress 300 -work work D:/School/ECE 111/ece_111_final_project-main/simplified_sha256/simplified_sha256.sv 
+# -- Compiling module simplified_sha256
+# 
+# Top level modules:
+# 	simplified_sha256
+# End time: 20:53:58 on Jun 10,2023, Elapsed time: 0:00:01
+# Errors: 0, Warnings: 0
+vlog -reportprogress 300 -work work {D:/School/ECE 111/ece_111_final_project-main/simplified_sha256/tb_simplified_sha256.sv}
+# Model Technology ModelSim - Intel FPGA Edition vlog 2020.1 Compiler 2020.02 Feb 28 2020
+# Start time: 20:53:58 on Jun 10,2023
+# vlog -reportprogress 300 -work work D:/School/ECE 111/ece_111_final_project-main/simplified_sha256/tb_simplified_sha256.sv 
+# -- Compiling module tb_simplified_sha256
+# 
+# Top level modules:
+# 	tb_simplified_sha256
+# End time: 20:53:58 on Jun 10,2023, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+vsim work.tb_simplified_sha256
+# vsim work.tb_simplified_sha256 
+# Start time: 20:54:07 on Jun 10,2023
+# Loading sv_std.std
+# Loading work.tb_simplified_sha256
+# Loading work.simplified_sha256
+add wave -position insertpoint sim:/tb_simplified_sha256/*
+add wave -position insertpoint  \
+sim:/tb_simplified_sha256/simplified_sha256_inst/state
+add wave -position insertpoint  \
+sim:/tb_simplified_sha256/w
+run -all
+# --------
+# MESSAGE:
+# --------
+# 01234567
+# 02468ace
+# 048d159c
+# 091a2b38
+# 12345670
+# 2468ace0
+# 48d159c0
+# 91a2b380
+# 23456701
+# 468ace02
+# 8d159c04
+# 1a2b3809
+# 34567012
+# 68ace024
+# d159c048
+# a2b38091
+# 45670123
+# 8ace0246
+# 159c048d
+# 00000000
+# ***************************
+# 
+# ---------------------
+# COMPARE HASH RESULTS:
+# ---------------------
+# Correct H[0] = bdd2fbd9	Your H[0] = bdd2fbd9
+# Correct H[1] = 42623974	Your H[1] = 42623974
+# Correct H[2] = bf129635	Your H[2] = bf129635
+# Correct H[3] = 937c5107	Your H[3] = 937c5107
+# Correct H[4] = f09b6e9e	Your H[4] = f09b6e9e
+# Correct H[5] = 708eb28b	Your H[5] = 708eb28b
+# Correct H[6] = 0318d121	Your H[6] = 0318d121
+# Correct H[7] = 85eca921	Your H[7] = 85eca921
+# ***************************
+# 
+# CONGRATULATIONS! All your hash results are correct!
+# 
+# Total number of cycles:         165
+# 
+# 
+# ***************************
+# 
+# ** Note: $stop    : D:/School/ECE 111/ece_111_final_project-main/simplified_sha256/tb_simplified_sha256.sv(262)
+#    Time: 3350 ps  Iteration: 2  Instance: /tb_simplified_sha256
+# Break in Module tb_simplified_sha256 at D:/School/ECE 111/ece_111_final_project-main/simplified_sha256/tb_simplified_sha256.sv line 262
+# image file format "bmp" is unknown
+# image file format "bmp" is unknown
+add wave -position insertpoint sim:/tb_simplified_sha256/simplified_sha256_inst/*
+restart -f
+run -all
+# --------
+# MESSAGE:
+# --------
+# 01234567
+# 02468ace
+# 048d159c
+# 091a2b38
+# 12345670
+# 2468ace0
+# 48d159c0
+# 91a2b380
+# 23456701
+# 468ace02
+# 8d159c04
+# 1a2b3809
+# 34567012
+# 68ace024
+# d159c048
+# a2b38091
+# 45670123
+# 8ace0246
+# 159c048d
+# 00000000
+# ***************************
+# 
+# ---------------------
+# COMPARE HASH RESULTS:
+# ---------------------
+# Correct H[0] = bdd2fbd9	Your H[0] = bdd2fbd9
+# Correct H[1] = 42623974	Your H[1] = 42623974
+# Correct H[2] = bf129635	Your H[2] = bf129635
+# Correct H[3] = 937c5107	Your H[3] = 937c5107
+# Correct H[4] = f09b6e9e	Your H[4] = f09b6e9e
+# Correct H[5] = 708eb28b	Your H[5] = 708eb28b
+# Correct H[6] = 0318d121	Your H[6] = 0318d121
+# Correct H[7] = 85eca921	Your H[7] = 85eca921
+# ***************************
+# 
+# CONGRATULATIONS! All your hash results are correct!
+# 
+# Total number of cycles:         165
+# 
+# 
+# ***************************
+# 
+# ** Note: $stop    : D:/School/ECE 111/ece_111_final_project-main/simplified_sha256/tb_simplified_sha256.sv(262)
+#    Time: 3350 ps  Iteration: 2  Instance: /tb_simplified_sha256
+# Break in Module tb_simplified_sha256 at D:/School/ECE 111/ece_111_final_project-main/simplified_sha256/tb_simplified_sha256.sv line 262
+# End time: 21:35:29 on Jun 10,2023, Elapsed time: 0:41:22
+# Errors: 0, Warnings: 0

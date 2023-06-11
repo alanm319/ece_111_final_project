@@ -276,7 +276,7 @@ begin
         w[15] = 32'd256; // SIZE = 256 BITS
 
 
-        $displayh("tb memory input for phase3 nonce %d = %p", n, w);
+        //$displayh("tb memory input for phase3 nonce %d = %p", n, w);
 
         for (t = 16; t < 64; t++) begin
             s0 = rightrotate(w[t-15], 7) ^ rightrotate(w[t-15], 18) ^ (w[t-15] >> 3);

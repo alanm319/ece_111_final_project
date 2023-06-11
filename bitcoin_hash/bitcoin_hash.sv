@@ -159,7 +159,7 @@ always_ff @( posedge clk, negedge reset_n) begin
 
         PHASE3: begin
             if (& block_done) begin
-                $displayh("phase3 outputs: %p", end_hash);
+                //$displayh("phase3 outputs: %p", end_hash);
                 offset <= 'd0;
                 state <= WRITE;
                 cur_addr <= output_addr;
@@ -183,6 +183,7 @@ always_ff @( posedge clk, negedge reset_n) begin
 
 
         default: begin
+            state <= IDLE;
             $displayh("Hit default in bitcoin_hash");
         end
     endcase
