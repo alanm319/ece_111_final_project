@@ -142,7 +142,6 @@ begin
     // Initialize hash values h0 to h7 and a to h, other variables and memory we, address offset, etc
     IDLE: begin
         if(start) begin
-$display("TotalPaddingWidth = %d", TotalPaddingWidth);
         // Student to add rest of the code
             h0 <= 'h6a09e667;
             h1 <= 'hbb67ae85;
