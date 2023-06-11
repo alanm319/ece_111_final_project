@@ -110,7 +110,7 @@ begin
   else case (state)
     // Initialize hash values h0 to h7 and a to h, other variables and memory we, address offset, etc
     IDLE: begin
-        is_done <= 0;
+        is_done <= 1'd0;
         if(start) begin
         // Student to add rest of the code
             h0 <= h_init[0];
@@ -131,7 +131,7 @@ begin
             g  <= h_init[6];
             h  <= h_init[7];
             // initialize all the counters
-            i <= 'b0;
+            i <= 8'b0;
 
             // prep for transition to READ_WAIT
             // state <= READ_WAIT;
@@ -147,7 +147,7 @@ begin
         if (i < 64) begin
             // w[i%16] <= current_expansion;
             w[15] <= current_expansion;
-            i     <= i + 1;
+            i     <= i + 8'd1;
             for (int n = 0; n < 15; n++) w[n] <= w[n+1];
             {a, b, c, d, e, f, g, h} <= sha256_op(a, b, c, d, e, f, g, h, current_expansion, i);
 
@@ -162,7 +162,7 @@ begin
             h6 <= h6 + g;
             h7 <= h7 + h;
             state  <= IDLE;
-            is_done <= 1;
+            is_done <= 1'd1;
         end
 
     end

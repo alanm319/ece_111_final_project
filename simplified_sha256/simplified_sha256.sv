@@ -52,7 +52,7 @@ logic [31:0] h0, h1, h2, h3, h4, h5, h6, h7;
 logic [31:0] a, b, c, d, e, f, g, h;
 logic [ 7:0] i, counter;
 logic j;
-logic [15:0] offset; // in word address
+logic [4:0] offset; // in word address
 
 // logic        cur_we;
 // logic [15:0] cur_addr;
@@ -185,7 +185,7 @@ $display("TotalPaddingWidth = %d", TotalPaddingWidth);
             if (offset > 0) begin
                 message[offset-1] <= mem_read_data;
             end
-            offset <= offset + 1;
+            offset <= offset + 5'd1;
         end
         else begin
             state <= BLOCK;
@@ -214,7 +214,7 @@ $display("TotalPaddingWidth = %d", TotalPaddingWidth);
             memory_block[511 -: TotalPaddingWidth] <= {
                 // i do not know why we need to multiply size by 2
                 // but otherwise it doesn't match the testbench padding
-                MessageSize*2,
+                MessageSize*'d2,
                 {NumPadZeros{1'b0}},
                 32'h80000000
             };
@@ -238,7 +238,7 @@ $display("TotalPaddingWidth = %d", TotalPaddingWidth);
         g  <= h6;
         h  <= h7;
         state <= COMPUTE;
-        i <= 0;
+        i <= 'd0;
     end
 
     // For each block compute hash function
@@ -257,7 +257,7 @@ $display("TotalPaddingWidth = %d", TotalPaddingWidth);
         if (i < 64) begin
             w[15] <= word_expand(i);
             for (int n = 0; n < 15; n++) w[n] <= w[n+1];
-            i    <= i + 1;
+            i    <= i + 8'd1;
             // $display("real %d: %p", i, sha256_op(a, b, c, d, e, f, g, h, word_expand(i), i));
             {a, b, c, d, e, f, g, h} <= sha256_op(a, b, c, d, e, f, g, h, word_expand(i), i);
         end
@@ -281,8 +281,8 @@ $display("TotalPaddingWidth = %d", TotalPaddingWidth);
                 // ugh
                 cur_write_data <= h0 + a;
                 // cur_we <= 1;
-                offset <= 0;
-                counter <= 1;
+                offset  <= 'd0;
+                counter <= 'd1;
                 state  <= WRITE;
             end
         end
@@ -305,8 +305,8 @@ $display("TotalPaddingWidth = %d", TotalPaddingWidth);
             default: $display("Error: default in case");
         endcase
 
-        offset <= offset + 1;
-        counter <= counter + 1;
+        offset <= offset + 5'd1;
+        counter <= counter + 8'd1;
     end
 
 

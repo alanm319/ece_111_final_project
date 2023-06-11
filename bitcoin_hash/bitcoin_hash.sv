@@ -87,13 +87,13 @@ always_ff @( posedge clk, negedge reset_n) begin
     end
     else begin 
     if (block_start) begin
-        block_start <= 0;
+        block_start <= 1'd0;
     end
     case (state)
         IDLE: begin
             if (start) begin
                 state <= READ;
-                offset <= 0;
+                offset <= 16'd0;
                 cur_addr <= message_addr;
             end
         end
@@ -104,7 +104,7 @@ always_ff @( posedge clk, negedge reset_n) begin
                 if (offset > 0) begin
                     message[offset-1] <= mem_read_data;
                 end
-                offset <= offset + 1;
+                offset <= offset + 16'd1;
             end
             else begin
                 init_hash <= HASH_CONSTANTS;
@@ -113,7 +113,7 @@ always_ff @( posedge clk, negedge reset_n) begin
                     memory_input[0][512-(i+1)*32 +: 32] <= message[i];
                 end
                 state <= PHASE1;
-                block_start <= 1;
+                block_start <= 1'd1;
             end
         end
 
@@ -131,7 +131,7 @@ always_ff @( posedge clk, negedge reset_n) begin
                             memory_input[i][(512-32*(j+1)) +: 32] <= message[(16+j)];
                         end
 
-                        block_start <= 1;
+                        block_start <= 1'd1;
                 end
                 state <= PHASE2;
             end
@@ -152,7 +152,7 @@ always_ff @( posedge clk, negedge reset_n) begin
 
                 end
                 state <= PHASE3;
-                block_start <= 1;
+                block_start <= 'd1;
             end
         end
 
@@ -160,7 +160,7 @@ always_ff @( posedge clk, negedge reset_n) begin
         PHASE3: begin
             if (& block_done) begin
                 $displayh("phase3 outputs: %p", end_hash);
-                offset <= 0;
+                offset <= 'd0;
                 state <= WRITE;
                 cur_addr <= output_addr;
 
@@ -173,7 +173,7 @@ always_ff @( posedge clk, negedge reset_n) begin
         WRITE: begin
             // copy zero'th block of final hash for each nonce to memory
             if (offset < 15) begin
-                offset <= offset + 1;
+                offset <= offset + 16'd1;
                 cur_write_data <= end_hash[offset+1][0];
             end 
             else begin
