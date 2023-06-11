@@ -24,6 +24,11 @@ localparam int NumPadZeros = 512 - Remainder - 1 - 64;
 localparam int RemainderWords = NUM_OF_WORDS % 16;
 localparam logic EvenFit = Remainder == 0;
 localparam [63:0] TotalPaddingWidth = 512 - Remainder;
+localparam [7:0] num_blocks = 2;
+
+// logic [ 7:0] num_blocks;
+// assign num_blocks = determine_num_blocks(NUM_OF_WORDS);
+
 
 // FSM state variables
 enum logic [2:0] {
@@ -43,57 +48,36 @@ typedef logic[31:0] logic32;
 // Local variables
 logic [31:0] w[16];
 logic [31:0] message[20];
-logic [31:0] wt;
 logic [31:0] h0, h1, h2, h3, h4, h5, h6, h7;
 logic [31:0] a, b, c, d, e, f, g, h;
-logic [ 7:0] i, j, counter;
+logic [ 7:0] i, counter;
+logic j;
 logic [15:0] offset; // in word address
-logic [ 7:0] num_blocks;
 
-logic        cur_we;
-logic [15:0] cur_addr;
+// logic        cur_we;
+// logic [15:0] cur_addr;
 logic [31:0] cur_write_data;
 
 logic [511:0] memory_block;
-logic [ 7:0] tstep;
 
-logic [5:0] t;
 logic32 s0;
 logic32 s1;
 
 
-
-
-assign num_blocks = determine_num_blocks(NUM_OF_WORDS);
-assign tstep = (i - 1);
-
-// Note : Function defined are for reference purpose. Feel free to add more functions or modify below.
-// Function to determine number of blocks in memory to fetch
-function automatic logic [15:0] determine_num_blocks(input logic [31:0] num_words);
-  logic[31:0] size;
-begin
-    
-    size = 32 * num_words;
-
-    if (EvenFit) begin
-      determine_num_blocks = size / 512;
-    end
-    else begin
-      determine_num_blocks = (size / 512) + 1;
-    end
-end
-endfunction
-
-function automatic logic[31:0] memory_block_get_block(input logic[7:0] idx);
-    logic[31:0] start_addr;
-    logic[31:0] end_addr;
-begin
-    start_addr = (idx+1) * 32;
-    end_addr = idx * 32;
-
-
-end
-endfunction
+// function automatic logic [15:0] determine_num_blocks(input logic [31:0] num_words);
+//   logic[31:0] size;
+// begin
+//     
+//     size = 32 * num_words;
+// 
+//     if (EvenFit) begin
+//       determine_num_blocks = size / 512;
+//     end
+//     else begin
+//       determine_num_blocks = (size / 512) + 1;
+//     end
+// end
+// endfunction
 
 
 // SHA256 hash round
@@ -133,8 +117,9 @@ endfunction
 // for reading from memory to get original message
 // for writing final computed has value
 assign mem_clk = clk;
-assign mem_addr = cur_addr + offset;
-assign mem_we = cur_we;
+// assign mem_addr = cur_addr + offset;
+assign mem_addr = (state == WRITE) ? (output_addr + offset) : (message_addr + offset);
+assign mem_we = (state == WRITE);
 assign mem_write_data = cur_write_data;
 
 
@@ -157,6 +142,7 @@ begin
     // Initialize hash values h0 to h7 and a to h, other variables and memory we, address offset, etc
     IDLE: begin
         if(start) begin
+$display("TotalPaddingWidth = %d", TotalPaddingWidth);
         // Student to add rest of the code
             h0 <= 'h6a09e667;
             h1 <= 'hbb67ae85;
@@ -167,14 +153,14 @@ begin
             h6 <= 'h1f83d9ab;
             h7 <= 'h5be0cd19;
 
-            a  <= 'h6a09e667;
-            b  <= 'hbb67ae85;
-            c  <= 'h3c6ef372;
-            d  <= 'ha54ff53a;
-            e  <= 'h510e527f;
-            f  <= 'h9b05688c;
-            g  <= 'h1f83d9ab;
-            h  <= 'h5be0cd19;
+            // a  <= 'h6a09e667;
+            // b  <= 'hbb67ae85;
+            // c  <= 'h3c6ef372;
+            // d  <= 'ha54ff53a;
+            // e  <= 'h510e527f;
+            // f  <= 'h9b05688c;
+            // g  <= 'h1f83d9ab;
+            // h  <= 'h5be0cd19;
 
             // initialize all the counters
             j <= 'b0;
@@ -185,8 +171,8 @@ begin
             // state <= READ_WAIT;
             state <= READ;
             offset <= 'b0;
-            cur_we <= 0;
-            cur_addr <= message_addr;
+            //cur_we <= 0;
+            // cur_addr <= message_addr;
 
             // $display("NUM_OF_WORDS=%d", NUM_OF_WORDS);
         end
@@ -214,10 +200,12 @@ begin
     // Fetch message in 512-bit block size
     // For each of 512-bit block initiate hash value computation
         // in this case deal with padding
-        if ((j + 1) == num_blocks) begin
+        // if ((j + 1) == num_blocks) begin
+        if (j == 1) begin
             // $display("padding");
             for (integer k = 0; k < RemainderWords; k = k + 1) begin
-                memory_block[(k*32) +: 32] <= message[(16*j)+k];
+                // memory_block[(k*32) +: 32] <= message[(16*j)+k];
+                memory_block[(k*32) +: 32] <= message[16+k];
             end
 
             // memory_block[511 -: 64] <= MessageSize;
@@ -235,7 +223,8 @@ begin
         else begin
             // $display("not padding");
             for (integer k = 0; k < 16; k = k + 1) begin
-                memory_block[(k*32) +: 32] <= message[(16*j)+k];
+                // memory_block[(k*32) +: 32] <= message[(16*j)+k];
+                memory_block[(k*32) +: 32] <= message[k];
             end
         end
 
@@ -283,15 +272,17 @@ begin
             h6 <= h6 + g;
             h7 <= h7 + h;
 
-            if ((j + 1) < num_blocks) begin
+            if (j == 0) begin
                 state <= BLOCK;
-                j <= j + 1;
+                j <= 'b1;
             end
             else begin
-                cur_addr <= output_addr;
-                cur_we <= 1;
+                // cur_addr <= output_addr;
+                // ugh
+                cur_write_data <= h0 + a;
+                // cur_we <= 1;
                 offset <= 0;
-                counter <= 0;
+                counter <= 1;
                 state  <= WRITE;
             end
         end
@@ -302,19 +293,7 @@ begin
     // h0 to h7 after compute stage has final computed hash value
     // write back these h0 to h7 to memory starting from output_addr
     WRITE: begin
-        // if (offset == 0) begin
-        //     $display("h0 = %x", h0);
-        //     $display("h1 = %x", h1);
-        //     $display("h2 = %x", h2);
-        //     $display("h3 = %x", h3);
-        //     $display("h4 = %x", h4);
-        //     $display("h5 = %x", h5);
-        //     $display("h6 = %x", h6);
-        //     $display("h7 = %x", h7);
-        // end
-
         case(counter)
-            0: cur_write_data <= h0;
             1: cur_write_data <= h1;
             2: cur_write_data <= h2;
             3: cur_write_data <= h3;
@@ -326,7 +305,7 @@ begin
             default: $display("Error: default in case");
         endcase
 
-        offset <= counter;
+        offset <= offset + 1;
         counter <= counter + 1;
     end
 
