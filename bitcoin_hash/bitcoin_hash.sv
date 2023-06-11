@@ -11,8 +11,6 @@ parameter int NUM_BLOCKS = 16;
 parameter int NUM_OF_WORDS = 19;
 localparam [63:0] MessageSize = (NUM_OF_WORDS + 1) * 32;
 
-logic [31:0] hout[NUM_NONCES];
-
 logic[511:0] memory_input[NUM_BLOCKS];
 logic block_start;
 logic[NUM_BLOCKS-1:0] block_done;
